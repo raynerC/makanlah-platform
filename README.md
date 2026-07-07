@@ -7,7 +7,27 @@
 > Bedrock-powered AI menu assistant. Designed for high availability, least-privilege security,
 > and a <$15/month steady-state AWS bill.
 
-**Status: 🚧 Phase 0 — Foundations** (remote state, CI identity via OIDC, cost guardrails)
+**Status: 🚧 Phase 2 next — core AWS infrastructure.** Phases 0–1 complete: foundations
+(remote state, OIDC CI identity, cost guardrails) and all three services running locally
+with an end-to-end order flow.
+
+## Run it locally (zero AWS required)
+
+```sh
+docker compose up -d --build     # or: make up-local
+bash scripts/demo-order.sh       # or: make demo-order
+```
+
+The demo creates a stall and menu item, places an order, proves idempotent replay
+(same key → same order, no duplicate), and shows the notification the worker consumed
+off the queue. DynamoDB Local and ElasticMQ stand in for AWS — the same code runs
+unchanged against the real services via two env vars.
+
+| Local endpoint | |
+|---|---|
+| menu-service | http://localhost:8081/docs |
+| order-service | http://localhost:8082/healthz |
+| ElasticMQ console | http://localhost:9325 |
 
 ## Target architecture
 
@@ -59,8 +79,8 @@ flowchart TB
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Foundations: remote state, GitHub OIDC CI roles, budget guardrails | 🚧 in progress |
-| 1 | Services: menu-service (FastAPI), order-service (Node), notify-worker (Python) | ⬜ |
+| 0 | Foundations: remote state, GitHub OIDC CI roles, budget guardrails | ✅ |
+| 1 | Services: menu-service (FastAPI), order-service (Node), notify-worker (Python) | ✅ |
 | 2 | Core infra: VPC, ALB, ECS Fargate, DynamoDB, SQS — all Terraform | ⬜ |
 | 3 | CI/CD: plan-on-PR, security gates, auto-apply dev, gated prod, auto-rollback | ⬜ |
 | 4 | Observability: dashboards, alarms, X-Ray tracing, k6 load tests, chaos drill | ⬜ |

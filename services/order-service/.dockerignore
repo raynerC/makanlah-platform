@@ -1,0 +1,5 @@
+node_modules/
+coverage/
+tests/
+README.md
+eslint.config.js

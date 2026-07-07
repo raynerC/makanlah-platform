@@ -1,0 +1,4 @@
+# Normalize line endings; shell scripts and Makefiles must stay LF to run
+* text=auto
+*.sh text eol=lf
+Makefile text eol=lf

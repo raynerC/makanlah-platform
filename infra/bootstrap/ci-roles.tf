@@ -47,6 +47,8 @@ resource "aws_iam_role_policy_attachment" "ci_plan_readonly" {
 
 # `terraform plan` must take and release the S3-native state lock (*.tflock);
 # scoping PutObject/DeleteObject to the lock suffix keeps the state itself read-only.
+# The wildcard is the lock-file naming pattern, not an open grant.
+#tfsec:ignore:aws-iam-no-policy-wildcards
 resource "aws_iam_role_policy" "ci_plan_state_lock" {
   name = "tfstate-lockfile"
   role = aws_iam_role.ci_readonly_plan.id

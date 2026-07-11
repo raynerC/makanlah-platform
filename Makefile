@@ -40,5 +40,6 @@ demo-order: ## place an order end-to-end against the local stack
 audit: ## verify the AWS account has no idle-billable resources
 	bash scripts/aws-audit.sh
 
-nuke: down-local ## tear down everything that costs money
-	@echo "local stack down. cloud teardown (terraform destroy) arrives with phase 2."
+nuke: down-local ## tear down EVERYTHING that costs money (local + cloud dev env)
+	cd infra/envs/dev && terraform destroy -auto-approve
+	@echo "dev environment destroyed. run 'make audit' to verify the account is at zero."

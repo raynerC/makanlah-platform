@@ -1,0 +1,47 @@
+# Checkov policy for this repo. Every skip is a deliberate, documented decision —
+# mostly the dev-tier cost/simplicity trade-offs of a <$5/month portfolio system.
+# Revisit each when a prod environment or a custom domain lands.
+
+directory:
+  - infra
+
+framework:
+  - terraform
+
+quiet: true
+compact: true
+
+skip-check:
+  # -- encryption: AWS-managed keys by choice; CMKs add $1/mo/key + policy overhead
+  - CKV_AWS_119 # DynamoDB CMK
+  - CKV_AWS_136 # ECR KMS
+  - CKV_AWS_158 # CloudWatch log group KMS
+  - CKV_AWS_145 # S3 KMS (state bucket uses SSE-S3, see bootstrap/state-bucket.tf)
+  # -- public entrypoint is public by design (WAF rate-limits + managed rules)
+  - CKV_AWS_260 # SG ingress 80 from 0.0.0.0/0
+  - CKV_AWS_382 # SG egress all: tasks reach AWS APIs via endpoints/NAT
+  # -- no custom domain yet, so no ACM cert: HTTP until then (README documents)
+  - CKV_AWS_2   # ALB HTTPS
+  - CKV2_AWS_20 # HTTP->HTTPS redirect
+  - CKV_AWS_103 # TLS 1.2 on listener
+  - CKV_AWS_378 # ALB->task traffic is HTTP inside the VPC; TLS-in-transit is a prod item
+  # -- WAF logging needs a Firehose delivery stream: cost, revisit for prod
+  - CKV2_AWS_31
+  # -- false positive: AWSManagedRulesKnownBadInputsRuleSet (contains Log4JRCE)
+  #    IS attached via aws_wafv2_web_acl_association; graph check misses it
+  - CKV2_AWS_76
+  # -- dev must be destroyable and cheap
+  - CKV_AWS_150 # ALB deletion protection
+  - CKV_AWS_91  # ALB access logs (S3 + storage cost)
+  - CKV_AWS_338 # 1-year log retention (7 days in dev)
+  - CKV2_AWS_11 # VPC flow logs (cost; revisit for prod)
+  # -- terraform state bucket: single-region project, IAM-gated
+  - CKV_AWS_18  # bucket access logging
+  - CKV_AWS_144 # cross-region replication
+  - CKV2_AWS_62 # event notifications
+  - CKV_AWS_21  # (bootstrap bucket already versioned; belt for module reuse)
+  # -- ci-deploy role: iam actions already constrained to makanlah-* resources
+  #    with an explicit deny on the ci roles themselves (see ci-roles.tf)
+  - CKV_AWS_289
+  - CKV_AWS_355
+  - CKV_AWS_290

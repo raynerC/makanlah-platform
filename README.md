@@ -7,9 +7,10 @@
 > Bedrock-powered AI menu assistant. Designed for high availability, least-privilege security,
 > and a <$15/month steady-state AWS bill.
 
-**Status: 🚧 Phase 2 next — core AWS infrastructure.** Phases 0–1 complete: foundations
-(remote state, OIDC CI identity, cost guardrails) and all three services running locally
-with an end-to-end order flow.
+**Status: 🚧 Phase 3 next — CI/CD pipelines.** Phases 0–2 complete. The full platform
+deploys to AWS from zero in **under 6 minutes** (`terraform apply`), passed a live
+internet-facing end-to-end order flow, and was destroyed the same session per the cost
+model — evidence in [docs/demo/phase2-dev-run.md](docs/demo/phase2-dev-run.md).
 
 ## Run it locally (zero AWS required)
 
@@ -81,7 +82,7 @@ flowchart TB
 |---|---|---|
 | 0 | Foundations: remote state, GitHub OIDC CI roles, budget guardrails | ✅ |
 | 1 | Services: menu-service (FastAPI), order-service (Node), notify-worker (Python) | ✅ |
-| 2 | Core infra: VPC, ALB, ECS Fargate, DynamoDB, SQS — all Terraform | ⬜ |
+| 2 | Core infra: VPC, ALB+WAF, ECS Fargate, DynamoDB, SQS — all Terraform | ✅ |
 | 3 | CI/CD: plan-on-PR, security gates, auto-apply dev, gated prod, auto-rollback | ⬜ |
 | 4 | Observability: dashboards, alarms, X-Ray tracing, k6 load tests, chaos drill | ⬜ |
 | 5 | Kubernetes track: kind → ephemeral EKS + Helm + HPA + Prometheus/Grafana | ⬜ |

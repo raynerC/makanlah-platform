@@ -13,3 +13,9 @@ variable "image_tag" {
   type        = string
   default     = "dev"
 }
+
+variable "alert_email" {
+  description = "Recipient for CloudWatch alarm notifications"
+  type        = string
+  default     = "raynerc.sm18@gmail.com"
+}

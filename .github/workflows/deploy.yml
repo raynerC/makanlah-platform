@@ -1,0 +1,162 @@
+# Owns the dev environment. On every merge to main (or manual dispatch):
+# build + Trivy-scan + push sha-tagged images, terraform apply, then gate on
+# ECS stability and the ALB 5xx alarm — rolling back the image tag if either
+# trips. Applies are skipped unless the repo variable DEV_ENV_ENABLED is
+# 'true': the $5/month budget means dev only runs during active work windows
+# (see docs/cost.md).
+#
+# Rollback drill: dispatch with image_tag set to a nonexistent tag and watch
+# the circuit breaker + this workflow put the previous version back.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - "infra/**"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Deploy this existing tag instead of building HEAD (bad tag = rollback drill)"
+        required: false
+      watch_minutes:
+        description: "Minutes to watch the 5xx alarm after rollout"
+        default: "10"
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  REGISTRY: 022440376627.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  build-push:
+    if: vars.DEV_ENV_ENABLED == 'true' && inputs.image_tag == ''
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [menu-service, order-service, notify-worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Assume deploy role via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::022440376627:role/makanlah-ci-deploy
+          aws-region: us-east-1
+
+      - name: Skip if this sha is already in ECR (tags are immutable)
+        id: exists
+        run: |
+          if aws ecr describe-images --repository-name makanlah/${{ matrix.service }} \
+               --image-ids imageTag=${{ github.sha }} >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        if: steps.exists.outputs.exists != 'true'
+        run: docker build -t $REGISTRY/makanlah/${{ matrix.service }}:${{ github.sha }} services/${{ matrix.service }}
+
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        if: steps.exists.outputs.exists != 'true'
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/makanlah/${{ matrix.service }}:${{ github.sha }}
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+      - name: Push
+        if: steps.exists.outputs.exists != 'true'
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin $REGISTRY
+          docker push $REGISTRY/makanlah/${{ matrix.service }}:${{ github.sha }}
+
+  deploy-dev:
+    needs: build-push
+    # run when builds succeeded, or when they were skipped because a tag
+    # override was supplied (rollback drill / redeploy of an old version)
+    if: |
+      always() && vars.DEV_ENV_ENABLED == 'true' &&
+      (needs.build-push.result == 'success' || (needs.build-push.result == 'skipped' && inputs.image_tag != ''))
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.2"
+          terraform_wrapper: false
+
+      - name: Assume deploy role via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::022440376627:role/makanlah-ci-deploy
+          aws-region: us-east-1
+
+      - name: Resolve target + previous tags
+        id: tags
+        run: |
+          echo "target=${{ inputs.image_tag || github.sha }}" >> "$GITHUB_OUTPUT"
+          terraform -chdir=infra/envs/dev init -input=false >/dev/null
+          prev=$(terraform -chdir=infra/envs/dev output -raw deployed_image_tag 2>/dev/null || echo "")
+          echo "previous=$prev" >> "$GITHUB_OUTPUT"
+          echo "deploying '$( [ -n "${{ inputs.image_tag }}" ] && echo override || echo sha )' tag; previous was '$prev'"
+
+      - name: Terraform apply
+        run: terraform -chdir=infra/envs/dev apply -input=false -auto-approve -var image_tag=${{ steps.tags.outputs.target }}
+
+      - name: Wait for ECS stability, verify the new tag actually runs
+        id: stable
+        run: |
+          cluster=makanlah-dev
+          services="makanlah-dev-menu-service makanlah-dev-order-service makanlah-dev-notify-worker"
+          aws ecs wait services-stable --cluster $cluster --services $services
+          fail=0
+          for s in $services; do
+            td=$(aws ecs describe-services --cluster $cluster --services $s --query 'services[0].deployments[?status==`PRIMARY`].taskDefinition | [0]' --output text)
+            img=$(aws ecs describe-task-definition --task-definition "$td" --query 'taskDefinition.containerDefinitions[0].image' --output text)
+            echo "$s -> $img"
+            case "$img" in
+              *:${{ steps.tags.outputs.target }}) ;;
+              *) echo "::error::$s is NOT running the target tag (circuit breaker rolled it back)"; fail=1 ;;
+            esac
+          done
+          echo "healthy=$((1-fail))" >> "$GITHUB_OUTPUT"
+          exit $fail
+
+      - name: Watch the ALB 5xx alarm
+        id: alarm
+        if: steps.stable.outputs.healthy == '1'
+        run: |
+          mins=${{ inputs.watch_minutes || '10' }}
+          for i in $(seq 1 $((mins * 2))); do
+            state=$(aws cloudwatch describe-alarms --alarm-names makanlah-dev-alb-target-5xx \
+                      --query 'MetricAlarms[0].StateValue' --output text)
+            echo "[$i/$((mins * 2))] alarm: $state"
+            [ "$state" = "ALARM" ] && { echo "healthy=0" >> "$GITHUB_OUTPUT"; exit 1; }
+            sleep 30
+          done
+          echo "healthy=1" >> "$GITHUB_OUTPUT"
+
+      - name: ROLLBACK — re-pin the previous image tag
+        if: failure() && steps.tags.outputs.previous != ''
+        run: |
+          echo "::warning::deploy of '${{ steps.tags.outputs.target }}' failed — rolling back to '${{ steps.tags.outputs.previous }}'"
+          terraform -chdir=infra/envs/dev apply -input=false -auto-approve -var image_tag=${{ steps.tags.outputs.previous }}
+          aws ecs wait services-stable --cluster makanlah-dev \
+            --services makanlah-dev-menu-service makanlah-dev-order-service makanlah-dev-notify-worker
+          echo "rollback complete: dev is back on '${{ steps.tags.outputs.previous }}'"
+
+      - name: Summary
+        if: success()
+        run: |
+          alb=$(terraform -chdir=infra/envs/dev output -raw alb_dns_name)
+          echo "### dev is live on \`${{ steps.tags.outputs.target }}\` — http://$alb" >> "$GITHUB_STEP_SUMMARY"

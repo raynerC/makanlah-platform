@@ -1,0 +1,63 @@
+# Applies the PERSISTENT shared stack (ECR) on merges to main, and PROD on
+# v* tags — behind the 'prod' GitHub environment's required-reviewer gate
+# plus a PROD_ENV_ENABLED variable (double gate: prod is defined for the
+# promotion pipeline but not provisioned under the $5/month budget).
+# The ephemeral dev environment is owned by deploy.yml, not this workflow.
+name: infra-apply
+
+# no paths filter: it interacts badly with tag pushes, and a no-change apply
+# of the shared stack costs ~30s of free runner time
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  apply-shared:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: apply-shared
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.2"
+
+      - name: Assume deploy role via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::022440376627:role/makanlah-ci-deploy
+          aws-region: us-east-1
+
+      - run: terraform -chdir=infra/envs/shared init -input=false
+      - run: terraform -chdir=infra/envs/shared apply -input=false -auto-approve
+
+  apply-prod:
+    if: startsWith(github.ref, 'refs/tags/v') && vars.PROD_ENV_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: prod # required reviewer approves here before anything runs
+    concurrency:
+      group: apply-prod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.15.2"
+
+      - name: Assume deploy role via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::022440376627:role/makanlah-ci-deploy
+          aws-region: us-east-1
+
+      - run: terraform -chdir=infra/envs/prod init -input=false
+      - run: terraform -chdir=infra/envs/prod apply -input=false -auto-approve -var image_tag=${{ github.sha }}

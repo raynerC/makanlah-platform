@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
         )
         yield
 
-    app = FastAPI(title="MakanLah menu-service", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="MakanLah menu-service", version="0.1.1", lifespan=lifespan)
 
     @app.middleware("http")
     async def request_logging(request: Request, call_next):

@@ -79,23 +79,21 @@ module "alb" {
   }
 }
 
-# deploy.yml watches this alarm for 10 minutes after each rollout and rolls
-# back the image tag if it fires (SNS notification wiring arrives in Phase 4)
-resource "aws_cloudwatch_metric_alarm" "alb_target_5xx" {
-  alarm_name          = "${local.name}-alb-target-5xx"
-  alarm_description   = "Backend 5xx burst — deploy gate + (later) paging signal"
-  namespace           = "AWS/ApplicationELB"
-  metric_name         = "HTTPCode_Target_5XX_Count"
-  statistic           = "Sum"
-  period              = 60
-  evaluation_periods  = 2
-  threshold           = 5
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
+# alarms (incl. the alb-target-5xx deploy gate), SNS email alerting, dashboard
+module "observability" {
+  source = "../../modules/observability"
 
-  dimensions = {
-    LoadBalancer = module.alb.alb_arn_suffix
-  }
+  name           = local.name
+  alert_email    = var.alert_email
+  alb_arn_suffix = module.alb.alb_arn_suffix
+  queue_name     = "${local.name}-order-events"
+  dlq_name       = "${local.name}-order-events-dlq"
+  cluster_name   = aws_ecs_cluster.this.name
+  service_names = [
+    "${local.name}-menu-service",
+    "${local.name}-order-service",
+    "${local.name}-notify-worker",
+  ]
 }
 
 # ---------------- least-privilege task policies ----------------

@@ -7,7 +7,8 @@ locals {
 # ---- alerting channel ----
 
 resource "aws_sns_topic" "alerts" {
-  name = "${var.name}-alerts"
+  name              = "${var.name}-alerts"
+  kms_master_key_id = "alias/aws/sns" # AWS-managed key: encryption at rest, no CMK cost
 }
 
 # the subscription stays 'pending confirmation' until the email owner clicks

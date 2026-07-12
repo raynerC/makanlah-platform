@@ -12,10 +12,12 @@
 > Bedrock-powered AI menu assistant. Designed for high availability, least-privilege security,
 > and a <$15/month steady-state AWS bill.
 
-**Status: 🚧 Phase 3 next — CI/CD pipelines.** Phases 0–2 complete. The full platform
-deploys to AWS from zero in **under 6 minutes** (`terraform apply`), passed a live
-internet-facing end-to-end order flow, and was destroyed the same session per the cost
-model — evidence in [docs/demo/phase2-dev-run.md](docs/demo/phase2-dev-run.md).
+**Status: 🚧 Phase 4 next — observability.** Phases 0–3 complete. The platform deploys
+from zero in under 6 minutes, a one-line change flows PR → merge → live with **zero
+manual steps**, and a deliberately-broken deploy **auto-rolls back** (circuit breaker +
+alarm watch + terraform re-pin) with the service never going dark — evidence in
+[docs/demo/phase3-cicd-run.md](docs/demo/phase3-cicd-run.md) and
+[docs/demo/phase2-dev-run.md](docs/demo/phase2-dev-run.md).
 
 ## Run it locally (zero AWS required)
 
@@ -88,7 +90,7 @@ flowchart TB
 | 0 | Foundations: remote state, GitHub OIDC CI roles, budget guardrails | ✅ |
 | 1 | Services: menu-service (FastAPI), order-service (Node), notify-worker (Python) | ✅ |
 | 2 | Core infra: VPC, ALB+WAF, ECS Fargate, DynamoDB, SQS — all Terraform | ✅ |
-| 3 | CI/CD: plan-on-PR, security gates, auto-apply dev, gated prod, auto-rollback | ⬜ |
+| 3 | CI/CD: plan-on-PR, security gates, auto-apply dev, gated prod, auto-rollback | ✅ |
 | 4 | Observability: dashboards, alarms, X-Ray tracing, k6 load tests, chaos drill | ⬜ |
 | 5 | Kubernetes track: kind → ephemeral EKS + Helm + HPA + Prometheus/Grafana | ⬜ |
 | 6 | GenAI: Amazon Bedrock menu assistant grounded in DynamoDB data | ⬜ |

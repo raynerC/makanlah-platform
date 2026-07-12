@@ -1,5 +1,10 @@
 # 🍜 MakanLah — Cloud-Native Food-Ordering Platform on AWS
 
+[![ci](https://github.com/raynerC/makanlah-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/raynerC/makanlah-platform/actions/workflows/ci.yml)
+[![infra](https://github.com/raynerC/makanlah-platform/actions/workflows/infra-plan.yml/badge.svg)](https://github.com/raynerC/makanlah-platform/actions/workflows/infra-plan.yml)
+[![deploy](https://github.com/raynerC/makanlah-platform/actions/workflows/deploy.yml/badge.svg)](https://github.com/raynerC/makanlah-platform/actions/workflows/deploy.yml)
+[![security](https://github.com/raynerC/makanlah-platform/actions/workflows/security.yml/badge.svg)](https://github.com/raynerC/makanlah-platform/actions/workflows/security.yml)
+
 > **MakanLah** is a cloud-native food-ordering platform for Malaysian hawker stalls, built and
 > operated like a production system: microservices on AWS ECS Fargate (with an EKS/Kubernetes
 > deployment track), 100% Terraform-managed infrastructure, GitHub Actions CI/CD with OIDC

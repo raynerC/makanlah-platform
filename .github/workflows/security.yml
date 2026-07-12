@@ -1,0 +1,73 @@
+# Weekly hygiene: secret scanning over full history, dependency audits, and
+# a rescan of the latest images in ECR with fresh vulnerability data.
+name: security
+
+on:
+  schedule:
+    - cron: "0 20 * * 0" # sunday 20:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: catch secrets committed then removed
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: npm audit (order-service)
+        working-directory: services/order-service
+        run: npm audit --omit=dev --audit-level=high
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: pip-audit (menu-service, notify-worker)
+        run: |
+          pip install pip-audit >/dev/null
+          for svc in menu-service notify-worker; do
+            echo "=== $svc"
+            python -m venv /tmp/$svc && /tmp/$svc/bin/pip install -q ./services/$svc
+            pip-audit --python /tmp/$svc/bin/python
+          done
+
+  image-rescan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assume read-only role via OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::022440376627:role/makanlah-ci-readonly-plan
+          aws-region: us-east-1
+
+      - name: Rescan latest image per repo (skip empty repos)
+        run: |
+          registry=022440376627.dkr.ecr.us-east-1.amazonaws.com
+          aws ecr get-login-password | docker login --username AWS --password-stdin $registry
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin >/dev/null
+          for repo in menu-service order-service notify-worker; do
+            tag=$(aws ecr describe-images --repository-name makanlah/$repo \
+                    --query 'sort_by(imageDetails,&imagePushedAt)[-1].imageTags[0]' --output text 2>/dev/null || echo None)
+            if [ "$tag" = "None" ] || [ -z "$tag" ]; then
+              echo "=== makanlah/$repo: empty, skipping"; continue
+            fi
+            echo "=== makanlah/$repo:$tag"
+            trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed $registry/makanlah/$repo:$tag
+          done

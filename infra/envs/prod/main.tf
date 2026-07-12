@@ -1,7 +1,13 @@
+# PROD — defined for the promotion pipeline (v* tag -> gated apply), but NOT
+# provisioned: the $5/month budget keeps exactly one environment alive at a
+# time, and dev is the one that runs. Differences from dev: 2 tasks per API
+# service. Same single-NAT trade-off (documented in ADR-003) until real
+# traffic justifies per-AZ NATs.
+
 data "aws_caller_identity" "current" {}
 
 locals {
-  name = "${var.project}-dev"
+  name = "${var.project}-prod"
   # images live in the persistent envs/shared stack; the registry URL is
   # deterministic, so no cross-stack state coupling is needed
   registry = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
@@ -166,6 +172,8 @@ module "menu_service" {
   target_group_arn      = module.alb.target_group_arns["menu"]
   alb_security_group_id = module.alb.alb_security_group_id
 
+  desired_count = 2
+
   environment = {
     MENUS_TABLE = module.menus_table.table_name
     AWS_REGION  = var.aws_region
@@ -186,6 +194,8 @@ module "order_service" {
   private_subnet_ids    = module.network.private_subnet_ids
   target_group_arn      = module.alb.target_group_arns["order"]
   alb_security_group_id = module.alb.alb_security_group_id
+
+  desired_count = 2
 
   environment = {
     ORDERS_TABLE           = module.orders_table.table_name

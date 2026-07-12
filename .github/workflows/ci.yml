@@ -1,0 +1,126 @@
+# PR validation for the services: lint, tests, image build, Trivy scan.
+# Deliberately does NOT push images — pull requests only ever get the
+# read-only OIDC role; images are built+pushed from main by deploy.yml.
+name: ci
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      menu: ${{ steps.filter.outputs.menu }}
+      order: ${{ steps.filter.outputs.order }}
+      worker: ${{ steps.filter.outputs.worker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            menu:
+              - 'services/menu-service/**'
+            order:
+              - 'services/order-service/**'
+            worker:
+              - 'services/notify-worker/**'
+
+  menu-service:
+    needs: changes
+    if: needs.changes.outputs.menu == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/menu-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check app tests
+      - run: pytest
+      - run: docker build -t menu-service:ci .
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: menu-service:ci
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+  order-service:
+    needs: changes
+    if: needs.changes.outputs.order == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/order-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/order-service/package-lock.json
+      - run: npm ci
+      - run: npx eslint src tests
+      - run: npx jest --coverage
+      - run: docker build -t order-service:ci .
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: order-service:ci
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+  notify-worker:
+    needs: changes
+    if: needs.changes.outputs.worker == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/notify-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check worker tests
+      - run: pytest
+      - run: docker build -t notify-worker:ci .
+      - name: Trivy scan (fail on HIGH/CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: notify-worker:ci
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+
+  # single aggregate for branch protection: green when every triggered job
+  # passed and untouched services were skipped
+  ci-ok:
+    name: ci-ok
+    needs: [changes, menu-service, order-service, notify-worker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any needed job failed
+        run: |
+          results='${{ join(needs.*.result, ' ') }}'
+          echo "job results: $results"
+          case "$results" in
+            *failure*|*cancelled*) exit 1 ;;
+          esac

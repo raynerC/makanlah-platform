@@ -62,13 +62,36 @@ overflow to the saturated target), which the target-5xx deploy gate doesn't watc
 
 ![elb 503](img/phase4-elb-503.png)
 
-## Follow-ups (filed as issues)
+## Follow-ups (filed as issues, fixed, validated)
 
-1. **Scale on `ALBRequestCountPerTarget`** (or add it alongside CPU): request pressure
-   is the real signal for a request-bound service, and it doesn't sawtooth.
-2. **Add `HTTPCode_ELB_5XX_Count` to the alarm set and deploy gate**: target-5xx
+1. **Scale on `ALBRequestCountPerTarget`** (#13): request pressure is the real signal
+   for a request-bound service, and it doesn't sawtooth.
+2. **Add `HTTPCode_ELB_5XX_Count` to the alarm set and deploy gate** (#14): target-5xx
    catches app bugs; ELB-5xx catches saturation and no-healthy-target states.
 
-The interview version: *the load test succeeded by failing* — it proved the WAF, the
-paging path, and the self-healing, and it caught two monitoring/scaling design gaps
-that only show up under real pressure.
+## Validation run (2026-07-13, after the fixes)
+
+Same 200-VU profile against the fixed environment
+(request-count target tracking at 600 req/min/task, menu-service ceiling 8):
+
+| Metric | Incident run | Validation run |
+|---|---|---|
+| Failures | 26.13% (4,694 ELB 503s) | **0.09%** (22) |
+| menu-service tasks | 1, never scaled | **1 → 8** |
+| p95 at peak | 10.3s, never recovered | 11.3s during ramp → **150ms in-SLO** after scale-out |
+| Throughput | 33 req/s | 42.7 req/s |
+| p95 alarm | fired, stayed until load ended | fired 05:40, **auto-recovered 05:45 as capacity arrived** |
+
+![validation scale-out](img/phase4-validation-scaleout.png)
+
+Timeline: single task saturates during the ramp (p95 to 11.3s, alarm fires) →
+request-count policy scales 1→4 at minute 6, climbing to 8 → p95 collapses to 150ms
+while 200 VUs are still running → alarm auto-recovers. The system detected and
+resolved its own incident; the remaining gap is scale-out *lead time* (the ramp
+outpaced the 3-minute alarm window), which is a capacity-planning knob
+(min tasks / target value), not a design flaw.
+
+The interview version: *the first load test succeeded by failing* — it proved the WAF,
+the paging path, and self-healing, and caught two scaling/monitoring gaps that only
+appear under real pressure. The fixes were shipped through the same PR pipeline and
+validated by re-running the identical scenario.

@@ -47,7 +47,9 @@ Full evidence in [docs/demo/phase4-load-and-chaos.md](demo/phase4-load-and-chaos
   per service, so that was an 80s partial outage — prod's `desired_count=2` is the fix.
 - **Saturation (200 VUs)**: p95 alarm paged correctly (19:26). Autoscaling did NOT
   fire — CPU *average* sawtoothed across the 60% target while max sat at 100%, and all
-  user-facing failures were ELB 503s, invisible to the target-5xx gate. Follow-ups:
-  scale on `ALBRequestCountPerTarget`; alarm on `HTTPCode_ELB_5XX_Count`.
+  user-facing failures were ELB 503s, invisible to the target-5xx gate. Fixed (#13
+  request-count scaling, #14 ELB-5xx alarm + gate) and **validated 2026-07-13**:
+  same load, 1→8 tasks, failures 26%→0.09%, p95 alarm fired and auto-recovered
+  as capacity arrived.
 - **Bonus**: the WAF rate limit blocked the first load run entirely (98.7% 403s) —
   security control validated by accident.

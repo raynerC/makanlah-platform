@@ -12,13 +12,16 @@
 > Bedrock-powered AI menu assistant. Designed for high availability, least-privilege security,
 > and a <$15/month steady-state AWS bill.
 
-**Status: 🚧 Phase 5 next — Kubernetes track.** Phases 0–4 complete. The platform
-deploys from zero in under 6 minutes with zero-touch CI/CD and demonstrated
-auto-rollback; it is instrumented with dashboards, SNS paging, and alarms that were
-**validated under a 200-VU load test and a live chaos drill** — including an
-80-second ECS self-heal and two monitoring gaps the load test caught (the honest
-kind of evidence). See [docs/demo/phase4-load-and-chaos.md](docs/demo/phase4-load-and-chaos.md),
-[phase3-cicd-run.md](docs/demo/phase3-cicd-run.md), [phase2-dev-run.md](docs/demo/phase2-dev-run.md).
+**Status: 🚧 Phase 6 next — the Bedrock AI assistant.** Phases 0–5 complete. The
+platform deploys from zero in under 6 minutes with zero-touch CI/CD and demonstrated
+auto-rollback; its alarms and autoscaling were validated (and fixed, and re-validated)
+under 200-VU load tests and a live chaos drill; and the same Helm-packaged workload
+runs on Kubernetes — kind locally, and an **ephemeral EKS cluster where the HPA scaled
+1→8 pods in under 2 minutes with zero failed requests**, destroyed the same session.
+Evidence: [phase5-eks-run.md](docs/demo/phase5-eks-run.md),
+[phase4-load-and-chaos.md](docs/demo/phase4-load-and-chaos.md),
+[phase3-cicd-run.md](docs/demo/phase3-cicd-run.md),
+[phase2-dev-run.md](docs/demo/phase2-dev-run.md).
 
 ## Run it locally (zero AWS required)
 
@@ -93,7 +96,7 @@ flowchart TB
 | 2 | Core infra: VPC, ALB+WAF, ECS Fargate, DynamoDB, SQS — all Terraform | ✅ |
 | 3 | CI/CD: plan-on-PR, security gates, auto-apply dev, gated prod, auto-rollback | ✅ |
 | 4 | Observability: dashboards, SNS alarms, k6 load tests, chaos drill | ✅ |
-| 5 | Kubernetes track: kind → ephemeral EKS + Helm + HPA + Prometheus/Grafana | ⬜ |
+| 5 | Kubernetes track: kind → ephemeral EKS + Helm + HPA under load | ✅ |
 | 6 | GenAI: Amazon Bedrock menu assistant grounded in DynamoDB data | ⬜ |
 | 7 | Packaging: docs, demo video, architecture walkthrough | ⬜ |
 

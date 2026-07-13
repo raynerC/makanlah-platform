@@ -1,0 +1,39 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: makanlah
+  labels:
+    {{- include "makanlah.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - http:
+        paths:
+          - path: /stalls
+            pathType: Prefix
+            backend:
+              service:
+                name: menu-service
+                port: { number: 8000 }
+          - path: /docs
+            pathType: Prefix
+            backend:
+              service:
+                name: menu-service
+                port: { number: 8000 }
+          - path: /openapi.json
+            pathType: Exact
+            backend:
+              service:
+                name: menu-service
+                port: { number: 8000 }
+          - path: /orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port: { number: 8000 }
+{{- end }}

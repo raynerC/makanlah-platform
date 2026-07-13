@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticmq-config
+  namespace: makanlah
+data:
+  elasticmq.conf: |
+    // mirrors production SQS topology: redrive to DLQ after 3 receives
+    include classpath("application.conf")
+
+    queues {
+      order-events {
+        defaultVisibilityTimeout = 5 seconds
+        deadLettersQueue {
+          name = "order-events-dlq"
+          maxReceiveCount = 3
+        }
+      }
+      order-events-dlq {}
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticmq
+  namespace: makanlah
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: elasticmq }
+  template:
+    metadata:
+      labels: { app: elasticmq }
+    spec:
+      containers:
+        - name: elasticmq
+          image: softwaremill/elasticmq-native:latest
+          ports:
+            - containerPort: 9324
+          volumeMounts:
+            - name: config
+              mountPath: /opt/elasticmq.conf
+              subPath: elasticmq.conf
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { cpu: 250m, memory: 256Mi }
+      volumes:
+        - name: config
+          configMap:
+            name: elasticmq-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticmq
+  namespace: makanlah
+spec:
+  selector: { app: elasticmq }
+  ports:
+    - port: 9324
+      targetPort: 9324

@@ -1,0 +1,6 @@
+apiVersion: v2
+name: makanlah
+description: MakanLah food-ordering platform — menu-service, order-service, notify-worker
+type: application
+version: 0.1.0
+appVersion: "0.1.1"

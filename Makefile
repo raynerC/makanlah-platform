@@ -47,6 +47,16 @@ k8s-local-up: ## run the platform on kind: backing services via manifests, apps 
 k8s-local-down:
 	kind delete cluster --name makanlah
 
+demo-eks: ## ephemeral EKS demo: cluster + controllers + app (~$0.30/hr — nuke after!)
+	bash scripts/demo-eks.sh
+
+demo-eks-load: ## k6 against the EKS ingress; watch HPA scale pods
+	$(eval HOST := $(shell kubectl -n makanlah get ingress makanlah -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'))
+	MSYS_NO_PATHCONV=1 docker run --rm -i grafana/k6 run -e ALB=$(HOST) - < load/k6/order-flow.js
+
+nuke-eks: ## destroy the EKS demo (helm releases first, then terraform)
+	bash scripts/nuke-eks.sh
+
 audit: ## verify the AWS account has no idle-billable resources
 	bash scripts/aws-audit.sh
 

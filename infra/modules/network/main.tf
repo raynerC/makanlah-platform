@@ -39,7 +39,10 @@ resource "aws_subnet" "public" {
   cidr_block        = cidrsubnet(var.cidr, 8, count.index)
   availability_zone = local.azs[count.index]
 
-  tags = { Name = "${var.name}-public-${local.azs[count.index]}", Tier = "public" }
+  tags = merge(
+    { Name = "${var.name}-public-${local.azs[count.index]}", Tier = "public" },
+    var.public_subnet_tags,
+  )
 }
 
 resource "aws_subnet" "private" {
@@ -49,7 +52,10 @@ resource "aws_subnet" "private" {
   cidr_block        = cidrsubnet(var.cidr, 8, count.index + 10)
   availability_zone = local.azs[count.index]
 
-  tags = { Name = "${var.name}-private-${local.azs[count.index]}", Tier = "private" }
+  tags = merge(
+    { Name = "${var.name}-private-${local.azs[count.index]}", Tier = "private" },
+    var.private_subnet_tags,
+  )
 }
 
 # ---- single NAT gateway (ADR-003: cost over AZ-redundancy in dev) ----

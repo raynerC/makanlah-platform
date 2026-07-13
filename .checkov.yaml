@@ -45,3 +45,8 @@ skip-check:
   - CKV_AWS_289
   - CKV_AWS_355
   - CKV_AWS_290
+  # -- ephemeral EKS demo cluster (lives hours; see infra/modules/eks/main.tf)
+  - CKV_AWS_39 # public endpoint: kubectl from laptop, no VPN, hours-lived
+  - CKV_AWS_38 # public endpoint CIDR
+  - CKV_AWS_58 # secrets-encryption CMK: demo stores zero k8s secrets
+  - CKV_AWS_37 # api+audit logs enabled; the remaining types are noise for a demo

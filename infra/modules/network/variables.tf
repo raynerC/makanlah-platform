@@ -14,3 +14,15 @@ variable "az_count" {
   type        = number
   default     = 2
 }
+
+variable "public_subnet_tags" {
+  description = "Extra tags (e.g. kubernetes.io/role/elb for the AWS Load Balancer Controller)"
+  type        = map(string)
+  default     = {}
+}
+
+variable "private_subnet_tags" {
+  description = "Extra tags (e.g. kubernetes.io/role/internal-elb)"
+  type        = map(string)
+  default     = {}
+}

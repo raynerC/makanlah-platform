@@ -33,12 +33,21 @@ make audit                                        # verify account is at zero
 | Alarm | Meaning | First moves |
 |---|---|---|
 | `*-alb-target-5xx` | backends returning errors | recent deploy? → rollback. `aws logs tail /ecs/makanlah-dev-<svc> --since 15m` for stack traces |
-| `*-p95-latency` | SLO breach (p95 > 800ms) | dashboard: CPU pegged? → autoscaling should react; not scaling → check max_count ceiling |
+| `*-p95-latency` | SLO breach (p95 > 800ms) | dashboard: CPU max pegged but tasks flat? CPU-average target tracking can miss saturation (see 2026-07-13 incident) — manually `aws ecs update-service --desired-count N`, then fix the scaling signal |
 | `*-dlq-not-empty` | poison order events | read the DLQ message, find the worker's `message processing failed` log, fix or purge |
 | `*-<svc>-no-running-tasks` | crash loop / failed deploy | `aws ecs describe-services` events, task stopped-reason, then logs |
 
 ## Incident log
 
-### 2026-07-13 — chaos drill: task kill under load (simulated)
+### 2026-07-13 — chaos drill + saturation test (simulated)
 
-Recorded in [docs/demo/phase4-load-and-chaos.md](demo/phase4-load-and-chaos.md).
+Full evidence in [docs/demo/phase4-load-and-chaos.md](demo/phase4-load-and-chaos.md).
+
+- **Task kill under load**: ECS self-healed in ~80s, no human action. Dev runs 1 task
+  per service, so that was an 80s partial outage — prod's `desired_count=2` is the fix.
+- **Saturation (200 VUs)**: p95 alarm paged correctly (19:26). Autoscaling did NOT
+  fire — CPU *average* sawtoothed across the 60% target while max sat at 100%, and all
+  user-facing failures were ELB 503s, invisible to the target-5xx gate. Follow-ups:
+  scale on `ALBRequestCountPerTarget`; alarm on `HTTPCode_ELB_5XX_Count`.
+- **Bonus**: the WAF rate limit blocked the first load run entirely (98.7% 403s) —
+  security control validated by accident.

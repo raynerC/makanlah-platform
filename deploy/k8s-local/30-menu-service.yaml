@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: menu-service
+  namespace: makanlah
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: menu-service }
+  template:
+    metadata:
+      labels: { app: menu-service }
+    spec:
+      containers:
+        - name: menu-service
+          image: makanlah/menu-service:latest
+          imagePullPolicy: Never # kind-loaded local image
+          ports:
+            - containerPort: 8000
+          env:
+            - { name: MENUS_TABLE, value: menus }
+            - { name: DYNAMODB_ENDPOINT_URL, value: "http://dynamodb-local:8000" }
+            - { name: AWS_ACCESS_KEY_ID, value: local }
+            - { name: AWS_SECRET_ACCESS_KEY, value: local }
+            - { name: AWS_REGION, value: us-east-1 }
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: menu-service
+  namespace: makanlah
+spec:
+  selector: { app: menu-service }
+  ports:
+    - port: 8000
+      targetPort: 8000

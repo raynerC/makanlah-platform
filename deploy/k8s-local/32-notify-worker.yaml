@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notify-worker
+  namespace: makanlah
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: notify-worker }
+  template:
+    metadata:
+      labels: { app: notify-worker }
+    spec:
+      containers:
+        - name: notify-worker
+          image: makanlah/notify-worker:latest
+          imagePullPolicy: Never
+          env:
+            - { name: ORDER_EVENTS_QUEUE_URL, value: "http://elasticmq:9324/000000000000/order-events" }
+            - { name: SQS_ENDPOINT_URL, value: "http://elasticmq:9324" }
+            - { name: WAIT_TIME_SECONDS, value: "2" }
+            - { name: AWS_ACCESS_KEY_ID, value: local }
+            - { name: AWS_SECRET_ACCESS_KEY, value: local }
+            - { name: AWS_REGION, value: us-east-1 }
+          # no HTTP port: healthy = heartbeat file touched within 60s
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os, sys, time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/notify-worker-heartbeat') < 60 else 1)"
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 50m, memory: 96Mi }
+            limits: { cpu: 250m, memory: 192Mi }

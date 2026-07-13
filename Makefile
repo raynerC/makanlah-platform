@@ -37,6 +37,16 @@ test-worker:
 demo-order: ## place an order end-to-end against the local stack
 	bash scripts/demo-order.sh
 
+k8s-local-up: ## run the platform on kind: backing services via manifests, apps via the helm chart
+	-kind create cluster --name makanlah
+	kind load docker-image makanlah/menu-service:latest makanlah/order-service:latest makanlah/notify-worker:latest --name makanlah
+	kubectl apply -f deploy/k8s-local/00-namespace.yaml -f deploy/k8s-local/10-dynamodb-local.yaml -f deploy/k8s-local/11-elasticmq.yaml -f deploy/k8s-local/20-init-tables-job.yaml
+	helm upgrade --install makanlah deploy/helm/makanlah -n makanlah -f deploy/helm/makanlah/values-local.yaml --wait --timeout 180s
+	@echo "try: kubectl -n makanlah port-forward svc/menu-service 8081:8000"
+
+k8s-local-down:
+	kind delete cluster --name makanlah
+
 audit: ## verify the AWS account has no idle-billable resources
 	bash scripts/aws-audit.sh
 

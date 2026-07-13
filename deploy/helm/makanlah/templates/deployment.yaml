@@ -1,0 +1,65 @@
+{{- range $name, $svc := .Values.services }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    app: {{ $name }}
+    {{- include "makanlah.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: {{ $name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}
+        {{- include "makanlah.labels" $ | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "makanlah.serviceAccountName" $ }}
+      containers:
+        - name: {{ $name }}
+          image: "{{ $.Values.image.registry }}/{{ $name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          {{- if $svc.expose }}
+          ports:
+            - containerPort: {{ $svc.port }}
+          {{- end }}
+          env:
+            {{- range $k, $v := $.Values.commonEnv }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- range $k, $v := $svc.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- if eq ($svc.probes | default "http") "http" }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ $svc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: {{ $svc.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- else }}
+          # worker has no HTTP port: healthy = heartbeat file touched recently
+          livenessProbe:
+            exec:
+              command:
+                - python
+                - -c
+                - "import os, sys, time; sys.exit(0 if time.time() - os.path.getmtime('/tmp/notify-worker-heartbeat') < 60 else 1)"
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          {{- end }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+---
+{{- end }}

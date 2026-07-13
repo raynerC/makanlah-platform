@@ -1,0 +1,72 @@
+# Defaults target EKS. deploy/helm/makanlah/values-local.yaml overrides for kind.
+
+image:
+  registry: 022440376627.dkr.ecr.us-east-1.amazonaws.com/makanlah
+  tag: latest
+  pullPolicy: IfNotPresent
+
+serviceAccount:
+  create: true
+  name: makanlah
+  # IRSA: the EKS stack outputs the role to put here
+  annotations: {}
+  # eks.amazonaws.com/role-arn: arn:aws:iam::...:role/makanlah-eks-app
+
+# rendered into every container
+commonEnv:
+  AWS_REGION: us-east-1
+
+services:
+  menu-service:
+    expose: true
+    port: 8000
+    replicas: 1
+    probes: http # http -> /healthz + /readyz; heartbeat -> exec file-age check
+    env:
+      MENUS_TABLE: menus
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits: { cpu: 500m, memory: 256Mi }
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 60
+
+  order-service:
+    expose: true
+    port: 8000
+    replicas: 1
+    probes: http
+    env:
+      ORDERS_TABLE: orders
+      ORDER_EVENTS_QUEUE_URL: ""
+    resources:
+      requests: { cpu: 100m, memory: 128Mi }
+      limits: { cpu: 500m, memory: 256Mi }
+    hpa:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 60
+
+  notify-worker:
+    expose: false
+    probes: heartbeat
+    replicas: 1
+    env:
+      ORDER_EVENTS_QUEUE_URL: ""
+      WAIT_TIME_SECONDS: "10"
+    resources:
+      requests: { cpu: 50m, memory: 96Mi }
+      limits: { cpu: 250m, memory: 192Mi }
+    hpa:
+      enabled: false
+
+ingress:
+  enabled: false # true on EKS with the AWS Load Balancer Controller installed
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz

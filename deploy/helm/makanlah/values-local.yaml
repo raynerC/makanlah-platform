@@ -1,0 +1,35 @@
+# kind overrides: local images, in-cluster AWS stand-ins, no HPA (no
+# metrics-server), no ingress (port-forward instead).
+
+image:
+  registry: makanlah
+  tag: latest
+  pullPolicy: Never # kind-loaded images
+
+commonEnv:
+  AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: local
+  AWS_SECRET_ACCESS_KEY: local
+
+services:
+  menu-service:
+    env:
+      MENUS_TABLE: menus
+      DYNAMODB_ENDPOINT_URL: http://dynamodb-local:8000
+    hpa:
+      enabled: false
+
+  order-service:
+    env:
+      ORDERS_TABLE: orders
+      DYNAMODB_ENDPOINT_URL: http://dynamodb-local:8000
+      SQS_ENDPOINT_URL: http://elasticmq:9324
+      ORDER_EVENTS_QUEUE_URL: http://elasticmq:9324/000000000000/order-events
+    hpa:
+      enabled: false
+
+  notify-worker:
+    env:
+      SQS_ENDPOINT_URL: http://elasticmq:9324
+      ORDER_EVENTS_QUEUE_URL: http://elasticmq:9324/000000000000/order-events
+      WAIT_TIME_SECONDS: "2"

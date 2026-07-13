@@ -42,6 +42,30 @@ resource "aws_cloudwatch_metric_alarm" "alb_target_5xx" {
   ok_actions    = [aws_sns_topic.alerts.arn]
 }
 
+# ELB-generated 5xx (503s: connection overflow to saturated targets, no healthy
+# targets) — the failure mode target-5xx cannot see. Added after the 2026-07-13
+# saturation incident where all 4,694 user-facing failures were ELB-generated.
+# name is load-bearing: deploy.yml watches this alarm too
+resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
+  alarm_name          = "${var.name}-alb-elb-5xx"
+  alarm_description   = "ELB-generated 5xx burst (saturation / no healthy targets) — deploy gate + paging signal"
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "HTTPCode_ELB_5XX_Count"
+  statistic           = "Sum"
+  period              = 60
+  evaluation_periods  = 2
+  threshold           = 25
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    LoadBalancer = var.alb_arn_suffix
+  }
+
+  alarm_actions = [aws_sns_topic.alerts.arn]
+  ok_actions    = [aws_sns_topic.alerts.arn]
+}
+
 resource "aws_cloudwatch_metric_alarm" "p95_latency" {
   alarm_name          = "${var.name}-p95-latency"
   alarm_description   = "p95 response time above SLO (${var.p95_threshold_seconds}s)"

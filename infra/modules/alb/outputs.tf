@@ -19,3 +19,8 @@ output "target_group_arns" {
   description = "Map of service key -> target group ARN"
   value       = { for k, tg in aws_lb_target_group.this : k => tg.arn }
 }
+
+output "target_group_arn_suffixes" {
+  description = "Map of service key -> target group ARN suffix (for autoscaling resource labels)"
+  value       = { for k, tg in aws_lb_target_group.this : k => tg.arn_suffix }
+}

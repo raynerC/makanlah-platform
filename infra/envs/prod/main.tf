@@ -172,6 +172,11 @@ module "menu_service" {
 
   desired_count = 2
 
+  enable_request_scaling  = true
+  alb_arn_suffix          = module.alb.alb_arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffixes["menu"]
+  max_count               = 8
+
   environment = {
     MENUS_TABLE = module.menus_table.table_name
     AWS_REGION  = var.aws_region
@@ -194,6 +199,10 @@ module "order_service" {
   alb_security_group_id = module.alb.alb_security_group_id
 
   desired_count = 2
+
+  enable_request_scaling  = true
+  alb_arn_suffix          = module.alb.alb_arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffixes["order"]
 
   environment = {
     ORDERS_TABLE           = module.orders_table.table_name

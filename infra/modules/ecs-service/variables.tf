@@ -67,6 +67,30 @@ variable "target_group_arn" {
   default     = null
 }
 
+variable "enable_request_scaling" {
+  description = "Scale on ALB requests-per-target (primary signal for exposed services). Must be a literal bool, not a computed value"
+  type        = bool
+  default     = false
+}
+
+variable "alb_arn_suffix" {
+  description = "ALB ARN suffix — required when enable_request_scaling"
+  type        = string
+  default     = null
+}
+
+variable "target_group_arn_suffix" {
+  description = "Target group ARN suffix — required when enable_request_scaling"
+  type        = string
+  default     = null
+}
+
+variable "requests_per_target" {
+  description = "Target requests/minute per task before scaling out"
+  type        = number
+  default     = 600
+}
+
 variable "alb_security_group_id" {
   description = "Required when target_group_arn is set"
   type        = string

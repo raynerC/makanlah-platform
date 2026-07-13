@@ -1,0 +1,105 @@
+EKS LOAD START: 2026-07-13T14:36:51Z
+--- 14:36:51
+menu-service    Deployment/menu-service    cpu: 6%/60%   1     8     1     3m55s
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     1     3m55s
+pods: 1 menu / 1 order
+--- 14:37:30
+menu-service    Deployment/menu-service    cpu: 37%/60%   1     8     1     4m32s
+order-service   Deployment/order-service   cpu: 3%/60%    1     4     1     4m32s
+pods: 1 menu / 1 order
+--- 14:38:06
+menu-service    Deployment/menu-service    cpu: 84%/60%   1     8     2     5m9s
+order-service   Deployment/order-service   cpu: 9%/60%    1     4     1     5m9s
+pods: 2 menu / 1 order
+--- 14:38:44
+menu-service    Deployment/menu-service    cpu: 121%/60%   1     8     3     5m47s
+order-service   Deployment/order-service   cpu: 32%/60%    1     4     1     5m47s
+pods: 6 menu / 1 order
+--- 14:39:21
+menu-service    Deployment/menu-service    cpu: 106%/60%   1     8     7     6m23s
+order-service   Deployment/order-service   cpu: 32%/60%    1     4     1     6m23s
+pods: 7 menu / 1 order
+--- 14:39:57
+menu-service    Deployment/menu-service    cpu: 119%/60%   1     8     8     6m59s
+order-service   Deployment/order-service   cpu: 50%/60%    1     4     1     6m59s
+pods: 8 menu / 1 order
+--- 14:40:35
+menu-service    Deployment/menu-service    cpu: 186%/60%   1     8     8     7m37s
+order-service   Deployment/order-service   cpu: 69%/60%    1     4     1     7m37s
+pods: 8 menu / 2 order
+--- 14:41:12
+menu-service    Deployment/menu-service    cpu: 231%/60%   1     8     8     8m14s
+order-service   Deployment/order-service   cpu: 84%/60%    1     4     2     8m14s
+pods: 8 menu / 2 order
+--- 14:41:49
+menu-service    Deployment/menu-service    cpu: 296%/60%   1     8     8     8m52s
+order-service   Deployment/order-service   cpu: 99%/60%    1     4     2     8m52s
+pods: 8 menu / 2 order
+--- 14:42:27
+menu-service    Deployment/menu-service    cpu: 353%/60%   1     8     8     9m30s
+order-service   Deployment/order-service   cpu: 101%/60%   1     4     2     9m30s
+pods: 8 menu / 2 order
+--- 14:43:05
+menu-service    Deployment/menu-service    cpu: 350%/60%   1     8     8     10m
+order-service   Deployment/order-service   cpu: 107%/60%   1     4     2     10m
+pods: 8 menu / 2 order
+--- 14:43:41
+menu-service    Deployment/menu-service    cpu: 348%/60%   1     8     8     10m
+order-service   Deployment/order-service   cpu: 99%/60%    1     4     2     10m
+pods: 8 menu / 2 order
+--- 14:44:17
+menu-service    Deployment/menu-service    cpu: 346%/60%   1     8     8     11m
+order-service   Deployment/order-service   cpu: 145%/60%   1     4     2     11m
+pods: 8 menu / 3 order
+--- 14:44:59
+menu-service    Deployment/menu-service    cpu: 345%/60%   1     8     8     12m
+order-service   Deployment/order-service   cpu: 98%/60%    1     4     3     12m
+pods: 8 menu / 3 order
+--- 14:45:39
+menu-service    Deployment/menu-service    cpu: 226%/60%   1     8     8     12m
+order-service   Deployment/order-service   cpu: 56%/60%    1     4     3     12m
+pods: 8 menu / 3 order
+--- 14:46:16
+menu-service    Deployment/menu-service    cpu: 15%/60%   1     8     8     13m
+order-service   Deployment/order-service   cpu: 6%/60%    1     4     3     13m
+pods: 8 menu / 3 order
+--- 14:46:55
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     13m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     13m
+pods: 8 menu / 3 order
+--- 14:47:34
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     14m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     14m
+pods: 8 menu / 3 order
+--- 14:48:12
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     15m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     15m
+pods: 8 menu / 3 order
+--- 14:48:49
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     15m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     15m
+pods: 8 menu / 3 order
+--- 14:49:28
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     16m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     16m
+pods: 8 menu / 3 order
+--- 14:50:05
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     17m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     17m
+pods: 8 menu / 3 order
+--- 14:50:43
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     8     17m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     3     17m
+pods: 8 menu / 1 order
+--- 14:51:19
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     2     18m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     1     18m
+pods: 1 menu / 1 order
+--- 14:51:57
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     1     19m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     1     19m
+pods: 1 menu / 1 order
+--- 14:52:34
+menu-service    Deployment/menu-service    cpu: 3%/60%   1     8     1     19m
+order-service   Deployment/order-service   cpu: 1%/60%   1     4     1     19m
+pods: 1 menu / 1 order

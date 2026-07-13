@@ -48,8 +48,6 @@ locals {
   namespace = "makanlah"
 }
 
-data "aws_caller_identity" "current" {}
-
 # ---------------- network (subnet tags let the ALB controller discover them) ----------------
 
 module "network" {

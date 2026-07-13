@@ -71,6 +71,10 @@ module "alb" {
       priority      = 20
     }
   }
+
+  # production-shaped default (500 req/5min per IP); load-test sessions apply
+  # with -var waf_rate_limit=1000000 so single-source k6 traffic isn't blocked
+  waf_rate_limit = var.waf_rate_limit
 }
 
 # alarms (incl. the alb-target-5xx deploy gate), SNS email alerting, dashboard
@@ -164,6 +168,13 @@ module "menu_service" {
   target_group_arn      = module.alb.target_group_arns["menu"]
   alb_security_group_id = module.alb.alb_security_group_id
 
+  # request pressure is the primary scaling signal (issue #13); menu-service
+  # takes ~80% of traffic, so it gets the higher ceiling
+  enable_request_scaling  = true
+  alb_arn_suffix          = module.alb.alb_arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffixes["menu"]
+  max_count               = 8
+
   environment = {
     MENUS_TABLE = module.menus_table.table_name
     AWS_REGION  = var.aws_region
@@ -184,6 +195,10 @@ module "order_service" {
   private_subnet_ids    = module.network.private_subnet_ids
   target_group_arn      = module.alb.target_group_arns["order"]
   alb_security_group_id = module.alb.alb_security_group_id
+
+  enable_request_scaling  = true
+  alb_arn_suffix          = module.alb.alb_arn_suffix
+  target_group_arn_suffix = module.alb.target_group_arn_suffixes["order"]
 
   environment = {
     ORDERS_TABLE           = module.orders_table.table_name

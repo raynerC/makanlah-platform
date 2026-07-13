@@ -132,16 +132,17 @@ jobs:
           echo "healthy=$((1-fail))" >> "$GITHUB_OUTPUT"
           exit $fail
 
-      - name: Watch the ALB 5xx alarm
+      - name: Watch the 5xx alarms (target-generated AND elb-generated)
         id: alarm
         if: steps.stable.outputs.healthy == '1'
         run: |
           mins=${{ inputs.watch_minutes || '10' }}
           for i in $(seq 1 $((mins * 2))); do
-            state=$(aws cloudwatch describe-alarms --alarm-names makanlah-dev-alb-target-5xx \
-                      --query 'MetricAlarms[0].StateValue' --output text)
-            echo "[$i/$((mins * 2))] alarm: $state"
-            [ "$state" = "ALARM" ] && { echo "healthy=0" >> "$GITHUB_OUTPUT"; exit 1; }
+            firing=$(aws cloudwatch describe-alarms \
+                      --alarm-names makanlah-dev-alb-target-5xx makanlah-dev-alb-elb-5xx \
+                      --query 'MetricAlarms[?StateValue==`ALARM`].AlarmName' --output text)
+            echo "[$i/$((mins * 2))] firing: ${firing:-none}"
+            [ -n "$firing" ] && { echo "healthy=0" >> "$GITHUB_OUTPUT"; exit 1; }
             sleep 30
           done
           echo "healthy=1" >> "$GITHUB_OUTPUT"

@@ -19,3 +19,9 @@ variable "alert_email" {
   type        = string
   default     = "raynerc.sm18@gmail.com"
 }
+
+variable "waf_rate_limit" {
+  description = "WAF per-IP request limit per 5 minutes; raise only for load-test sessions"
+  type        = number
+  default     = 500
+}

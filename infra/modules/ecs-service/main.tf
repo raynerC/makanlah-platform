@@ -188,3 +188,29 @@ resource "aws_appautoscaling_policy" "cpu" {
     }
   }
 }
+
+# CPU-average target tracking demonstrably missed a saturated single-worker
+# service (2026-07-13 incident: per-minute averages sawtoothed across the
+# target while max CPU was pegged at 100%). Request pressure doesn't
+# oscillate, so it is the primary scaling signal for ALB-fronted services;
+# the CPU policy stays as a backstop — ECS honors whichever asks for more.
+resource "aws_appautoscaling_policy" "requests" {
+  count = var.enable_request_scaling ? 1 : 0
+
+  name               = "${var.name}-requests-per-target"
+  policy_type        = "TargetTrackingScaling"
+  service_namespace  = aws_appautoscaling_target.this.service_namespace
+  resource_id        = aws_appautoscaling_target.this.resource_id
+  scalable_dimension = aws_appautoscaling_target.this.scalable_dimension
+
+  target_tracking_scaling_policy_configuration {
+    target_value       = var.requests_per_target
+    scale_in_cooldown  = 60
+    scale_out_cooldown = 60
+
+    predefined_metric_specification {
+      predefined_metric_type = "ALBRequestCountPerTarget"
+      resource_label         = "${var.alb_arn_suffix}/${var.target_group_arn_suffix}"
+    }
+  }
+}
